@@ -1,0 +1,32 @@
+version: '3.8'
+
+# canary deployment test will using nginx image
+services:
+  nginx-first:
+    image: nginx:alpine
+    volumes:
+      # html will different for testing purpose
+      - ./html1:/usr/share/nginx/html
+    restart: unless-stopped
+    labels:
+    # define labels as usual for docker provider and the name services port, make sure you have DIFFERENT names for every service
+      - "traefik.enable=true"
+      - "traefik.http.services.app-v1-service.loadbalancer.server.port=80"
+    networks:
+      - traefik-networks
+
+  nginx-second:
+    image: nginx:alpine
+    volumes:
+      - ./html2:/usr/share/nginx/html
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.app-v2-service.loadbalancer.server.port=80"
+    networks:
+      - traefik-networks
+
+networks:
+  default:
+  traefik-networks:
+    external: true

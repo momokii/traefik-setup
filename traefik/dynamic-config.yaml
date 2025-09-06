@@ -1,0 +1,62 @@
+http:
+  # HOW TO CREATE SERVICES IN DYNAMIC CONFIG FILE
+  services:
+    # example for a/b testing setup using weighted round robin
+    # this setup required (for what i tested) to define the MAIN routers ('app-ab-test-router' for this case) at the dynamic config file, and the services can be defined at docker labels or at the dynamic config file
+    app-wrr-service:
+    # define the services using docker labels at the compose file
+    # weight is the percentage of traffic that will be sent to the service
+      weighted:
+        services:
+        - name: app-v1-service@docker
+          weight: 9
+        - name: app-v2-service@docker
+          weight: 1
+    
+    # define the services straight using dynamic setup
+    whoami-sablier-service:
+      loadBalancer:
+        servers:
+          - url: "http://whoami_sablier:80" # 'whoami_sablier' is the container name of the whoami service, and 80 is the port inside the container where the app run, we differntiate it, because at this setup will be 2 whoami services, one is for sablier testing and the other one is for ssl setup testing
+
+  # HOW TO CREATE MIDDLEWARES IN DYNAMIC CONFIG FILE
+  # example setup middlewares here
+  middlewares:
+    test-ipallowlist: # the name of middlewares
+      ipAllowList:
+        sourceRange:
+          - "YOUR IP ADDRESS THAT WILL BE ALLOWED" # change this to your IP address
+    
+    my-sablier:
+      plugin:
+        sablier:
+          sablierUrl: http://sablier:10000
+          sessionDuration: 1m
+          names: whoami_sablier # names here will be reference to the docker container name that we want to protect using sablier, so not the router name or the services name, but the container name, so in this case the container name is 'whoami_sablier'
+          dynamic:
+            displayName: Save Your Resources!
+            refreshFrequency: 5s
+            showDetails: "true"
+            theme: ghost
+
+  # HOW TO CREATE ROUTERS IN DYNAMIC CONFIG FILE
+  routers:
+    # the define below ('app-ab-test-router' and 'whoami') is the name of the routers, you can change it to whatever you want and mostly this is just for reference inside the dynamic config file
+    app-ab-test-router:
+      rule: "Host(`YOUR-AB-TEST-DOMAIN`)"
+      entryPoints:
+      - "websecure" # use the websecure entrypoint because we want to use https, if the req come using http (port 80) it will be redirected to https (port 443) because at the traefik-config.yaml we setup the redirection from web to websecure
+      service: app-wrr-service
+      tls:
+        certResolver: myresolver
+  
+    # whoami here WILL BE example for the sablier plugin testing (not the ssl setup testing, because the ssl setup testing is at the compose file labels services (although use the same image) but in ssl setup the router name is 'app1-router' and the service name is 'app1-service')
+    whoami-sablier-router:
+      rule: "Host(`YOUR-DOMAIN-HERE)"
+      entryPoints:
+        - "websecure"
+      middlewares:
+        - my-sablier@file
+      service: whoami-sablier-service # reference to the services name that defined below
+      tls:
+        certResolver: myresolver

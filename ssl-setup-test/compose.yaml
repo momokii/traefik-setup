@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  # Simple service to test traefik with ssl using the whoami image
+  whoami:
+    image: traefik/whoami:latest
+    container_name: whoami-ssl
+    restart: unless-stopped
+    labels:
+      # ENABLE TRAEFIK
+      - "traefik.enable=true"
+
+      # === SETUP THE SERVICES CONFIGURATIONS
+      # port inside the container at the services for the 'binding' the port (port is the default port where the app run inside the container)
+      # this section make sure the name is different that services and the routers name
+      # e.g. here the service is "app1-service" and the router is "app1-router"
+      - "traefik.http.services.app1-service.loadbalancer.server.port=80"
+
+      # === TESTING CREATE MIDDLEWARES TRAEFIK IN DOCKER LABELS
+      # rate limiter  
+      - "traefik.http.middlewares.test-ratelimit.ratelimit.average=3" # avg req until reach the rate limit
+      - "traefik.http.middlewares.test-ratelimit.ratelimit.burst=3" # one req at time max
+      - "traefik.http.middlewares.test-ratelimit.ratelimit.period=10" # period time default set to 1s and this setup will be like avg 3 req/10sec
+
+      # === SETUP THE ROUTERS CONFIGURATIONS
+      # router to set the dns
+      - "traefik.http.routers.app1-router.rule=Host(`YOUR-DOMAIN`)" # change this to your domain
+      # entrypoint HTTPS
+      - "traefik.http.routers.app1-router.entrypoints=websecure"
+      # resolver for the tls cert
+      - "traefik.http.routers.app1-router.tls.certresolver=myresolver"
+
+      # if need using middlewares that define at labels services, make sure apply the middlewares that we need to use to this setup, also beside that midddlewares that created here, also can use the middlewares maybe that we setup at the dynamic config traefik
+      # below example using 2 middlewares, one is defined at the labels services and the other one is defined at the dynamic config file, you can differentiate it by the suffix after the @ sign
+      - "traefik.http.routers.app1-router.middlewares=test-ratelimit@docker,test-ipallowlist@file"
+
+    networks:
+      - traefik-networks
+
+networks:
+  default:
+  traefik-networks:
+    external: true
+
