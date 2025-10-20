@@ -52,11 +52,11 @@ http:
   
     # whoami here WILL BE example for the sablier plugin testing (not the ssl setup testing, because the ssl setup testing is at the compose file labels services (although use the same image) but in ssl setup the router name is 'app1-router' and the service name is 'app1-service')
     whoami-sablier-router:
-      rule: "Host(`YOUR-DOMAIN-HERE)"
+      rule: "Host(`YOUR-DOMAIN-HERE`)"
       entryPoints:
         - "websecure"
       middlewares:
         - my-sablier@file
-      service: whoami-sablier-service # reference to the services name that defined below
+      service: whoami-sablier-service # reference to the services name that defined above
       tls:
         certResolver: myresolver
