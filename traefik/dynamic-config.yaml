@@ -2,7 +2,7 @@ http:
   # HOW TO CREATE SERVICES IN DYNAMIC CONFIG FILE
   services:
     # example for a/b testing setup using weighted round robin
-    # this setup required (for what i tested) to define the MAIN routers ('app-ab-test-router' for this case) at the dynamic config file, and the services can be defined at docker labels or at the dynamic config file
+    # this setup required (for what i tested) to define the MAIN routers ('app-ab-test-router' for this case) at the dynamic config file, and the services can be define d at docker labels or at the dynamic config file
     app-wrr-service:
     # define the services using docker labels at the compose file
     # weight is the percentage of traffic that will be sent to the service
