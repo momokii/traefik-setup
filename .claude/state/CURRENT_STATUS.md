@@ -1,20 +1,22 @@
 # Current Status
 
 ## Project Phase
-Reference / Example Repository — Active development. Three core examples established with documentation. Expanding with additional Traefik patterns.
+Production-ready Traefik reverse proxy setup — restructured from reference examples into a proper deployment config.
 
 ## Completed
 
-- **Core Traefik setup** (`traefik/`) — working Traefik v3.1.5 with static and dynamic configuration, Docker provider, Let's Encrypt integration, Sablier plugin
-- **SSL/TLS example** (`ssl-setup-test/`) — whoami service with automatic certificate provisioning, rate limiting, IP allowlist middleware
-- **Canary deployment example** (`canary-deployment-test/`) — weighted round-robin load balancing (90/10 split) between two nginx services
-- **Zero-scale example** (`sablier-test-zero-scale/`) — Sablier integration for automatic service hibernation
-- **Documentation** (`README.md`) — comprehensive setup guide with troubleshooting and best practices
-- **Dynamic configuration** — working routers, services, and middlewares in `dynamic-config.yaml`
+- **Production Traefik setup** — hardened config with security best practices (TLS 1.2 min, HSTS, security headers, no insecure dashboard)
+- **Dashboard auth** — basic auth on `traefik.${DOMAIN}` subdomain, no public port 8080
+- **Docker socket read-only** — mounted with `:ro` + `no-new-privileges`
+- **App template** (`templates/app-compose.yaml`) — copy-paste-deploy workflow for new apps
+- **`.env` pattern** — secrets (domain, email, credentials) separated from config
+- **`.gitignore`** — protects `.env`, `acme.json`, `letsencrypt_data/`, logs
+- **Examples migrated** — moved to `examples/` as reference material
+- **Access logging** — enabled for audit trail
 
 ## In Progress
 
-- Nothing actively in progress — last commit was a container name update
+- Nothing actively in progress
 
 ## Blocked
 
@@ -22,22 +24,17 @@ Reference / Example Repository — Active development. Three core examples estab
 
 ## Known Issues
 
-- **Syntax error** in `dynamic-config.yaml:55` — `Host(\`YOUR-DOMAIN-HERE)` is missing the closing backtick. Should be `Host(\`YOUR-DOMAIN-HERE\`)`
-- **No `.gitignore`** — risk of accidentally committing `acme.json`, `letsencrypt_data/`, or other sensitive files
-- **No `.env.example`** — not strictly needed since config is in YAML files, but would be useful if env var patterns are adopted
+- None
 
-## Security Findings
+## Security Posture
 
-- **YELLOW** posture — no critical issues, but `.gitignore` must be created before further development
-- Insecure dashboard enabled (`api.insecure: true`) — acceptable for testing only
-- Docker socket mounted in Traefik and Sablier — required but documented as a security consideration
-- See `.claude/SECURITY_STANDARDS.md` for full details (SEC-001 through SEC-005)
-
-## Open Questions
-
-- Whether to add more Traefik examples (e.g., WebSocket proxying, authentication middleware, TCP routing)
-- Whether to introduce environment variable patterns for configuration (currently all YAML-based)
-- Whether to create production-ready compose overrides (e.g., `docker-compose.prod.yaml`)
+- **GREEN** — all audit findings resolved (SEC-001 through SEC-005 addressed)
+- Dashboard secured with basic auth (no insecure mode)
+- Docker socket read-only
+- Container runs with `no-new-privileges`
+- TLS 1.2 minimum with modern cipher suites
+- HSTS + security headers middleware
+- Secrets in `.env` (excluded from git)
 
 ## Last Updated
-2026-05-13 — Initial population from takeover audit
+2026-05-14 — Production revamp completed

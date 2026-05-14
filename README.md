@@ -1,345 +1,258 @@
-# Traefik Setup Examples & Tutorials
+# Traefik Reverse Proxy
 
-This repository contains practical examples and configurations for implementing advanced Traefik features in production environments. Each setup demonstrates best practices for common use cases including SSL/TLS termination, load balancing, middleware implementation, and resource optimization.
+Production-ready Traefik reverse proxy setup for Docker. Automatic SSL via Let's Encrypt, secure dashboard, and a dead-simple workflow for adding new apps.
 
-## Table of Contents
+## How It Works
 
-- [Traefik Setup Examples \& Tutorials](#traefik-setup-examples--tutorials)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Prerequisites](#prerequisites)
-  - [Quick Start](#quick-start)
-  - [Configuration Examples](#configuration-examples)
-    - [SSL/TLS Setup](#ssltls-setup)
-    - [Canary Deployment \& Load Balancing](#canary-deployment--load-balancing)
-    - [Middleware Configuration](#middleware-configuration)
-    - [Zero-Scale with Sablier Plugin](#zero-scale-with-sablier-plugin)
-  - [Network Architecture](#network-architecture)
-  - [Configuration Files](#configuration-files)
-    - [Core Files](#core-files)
-    - [Service Examples](#service-examples)
-  - [Best Practices](#best-practices)
-    - [Security](#security)
-    - [Performance](#performance)
-    - [Configuration Management](#configuration-management)
-    - [SSL/TLS](#ssltls)
-  - [Troubleshooting](#troubleshooting)
-    - [Common Issues](#common-issues)
-    - [Useful Commands](#useful-commands)
-    - [Configuration Validation](#configuration-validation)
-  - [Additional Resources](#additional-resources)
+```
+Internet → Cloudflare DNS (proxy off)
+  → Your VM
+    → Traefik (ports 80/443)
+      → auto-routes to your app containers
+      → auto-provisions SSL certificates
+```
 
-## Overview
-
-This setup demonstrates four key Traefik implementations:
-
-1. **SSL/TLS Automatic Certificate Management** - Let's Encrypt integration with HTTP-01 challenge
-2. **Weighted Round Robin Load Balancing** - Traffic distribution for A/B testing and canary deployments
-3. **Advanced Middleware** - Rate limiting and IP allowlist for security
-4. **Resource Optimization** - Automatic service scaling to zero using Sablier plugin
+Each app is a separate folder with its own `compose.yaml`. Apps self-register with Traefik via Docker labels. No shared config files to edit. Adding an app = copy template, change domain, deploy.
 
 ## Prerequisites
 
-- Docker and Docker Compose installed
-- Domain name(s) pointing to your server
-- Basic understanding of Docker networking
-- Public IP address for SSL certificate validation
+- Ubuntu/Debian VM with Docker + Docker Compose installed
+- A domain name using Cloudflare DNS
+- Ports 80 and 443 open on your VM firewall
 
-## Quick Start
+## One-Time Setup
 
-1. **Create the external network:**
-   ```bash
-   docker network create traefik-networks
-   ```
+### 1. Create the Docker network
 
-2. **Configure your domains:**
-   - Update `YOUR-DOMAIN` placeholders in configuration files
-   - Set your email address in `traefik/traefik-config.yaml`
-   - Configure your IP address in `traefik/dynamic-config.yaml`
+```bash
+docker network create traefik-network
+```
 
-3. **Start Traefik:**
-   ```bash
-   cd traefik
-   docker-compose up -d
-   ```
+This only needs to be done once on your VM. All apps + Traefik share this network.
 
-4. **Deploy example services:**
-   ```bash
-   # SSL setup example
-   cd ../ssl-setup-test
-   docker-compose up -d
-   
-   # Canary deployment example
-   cd ../canary-deployment-test
-   docker-compose up -d
-   
-   # Sablier zero-scale example
-   cd ../sablier-test-zero-scale
-   docker-compose up -d
-   ```
+### 2. Configure your environment
 
-## Configuration Examples
+```bash
+cp .env.example .env
+```
 
-### SSL/TLS Setup
+Edit `.env` with your real values:
 
-**Location:** `ssl-setup-test/`
+```
+DOMAIN=yourdomain.com
+ACME_EMAIL=your@email.com
+```
 
-Demonstrates automatic SSL certificate provisioning using Let's Encrypt with HTTP-01 challenge.
+### 3. Set up dashboard authentication
 
-**Key Features:**
-- Automatic certificate generation and renewal
-- HTTP to HTTPS redirection
-- Rate limiting middleware (3 requests per 10 seconds)
-- IP allowlist security
+Generate a password hash for the Traefik dashboard:
 
-**Configuration Highlights:**
+```bash
+htpasswd -nb admin "your-password" | sed -e 's/\$/\$\$/g'
+```
+
+Copy the output (looks like `admin:$$apr1$$...$$...`) and paste it into `traefik/dynamic.yaml`, replacing the placeholder line under `dashboard-auth`:
+
 ```yaml
-# Automatic HTTPS redirect
-entryPoints:
-  web:
-    address: ":80"
-    http:
-      redirections:
-        entryPoint:
-          to: websecure
-          scheme: https
-
-# Let's Encrypt resolver
-certificatesResolvers:
-  myresolver:
-    acme:
-      email: YOUR_EMAIL_HERE
-      storage: "/letsencrypt/acme.json"
-      httpChallenge:
-        entrypoint: web
+users:
+  - "admin:$$apr1$$...$$..."   # your htpasswd output here
 ```
 
-**Docker Labels Example:**
+Also update the dashboard domain in `dynamic.yaml`:
+
 ```yaml
-labels:
-  - "traefik.enable=true"
-  - "traefik.http.routers.app1-router.rule=Host(`your-domain.com`)"
-  - "traefik.http.routers.app1-router.entrypoints=websecure"
-  - "traefik.http.routers.app1-router.tls.certresolver=myresolver"
-  - "traefik.http.routers.app1-router.middlewares=test-ratelimit@docker,test-ipallowlist@file"
+rule: "Host(`traefik.yourdomain.com`)"    # change YOUR-DOMAIN
 ```
 
-### Canary Deployment & Load Balancing
+### 4. Add DNS records in Cloudflare
 
-**Location:** `canary-deployment-test/`
+Add two A records (proxy status = DNS only / grey cloud):
 
-Implements weighted round-robin load balancing for A/B testing and gradual feature rollouts.
+| Type  | Name    | Content      | Proxy     |
+|-------|---------|--------------|-----------|
+| A     | traefik | your VM IP   | DNS only  |
 
-**Key Features:**
-- Traffic splitting (90% to v1, 10% to v2)
-- Independent service scaling
-- Dynamic configuration management
+You'll add more records as you deploy apps (one per app).
 
-**Traffic Distribution:**
-- **Version 1 (Stable):** 90% of traffic
-- **Version 2 (Canary):** 10% of traffic
+### 5. Start Traefik
 
-**Dynamic Configuration:**
+```bash
+docker-compose up -d
+```
+
+Verify it's running:
+
+```bash
+docker logs traefik
+```
+
+Access the dashboard at `https://traefik.yourdomain.com` with the credentials you set up.
+
+## Adding a New App
+
+### 1. Add DNS record
+
+In Cloudflare, add an A record:
+
+| Type  | Name      | Content    | Proxy     |
+|-------|-----------|------------|-----------|
+| A     | myapp     | your VM IP | DNS only  |
+
+This creates `myapp.yourdomain.com` pointing to your VM.
+
+### 2. Create the app
+
+On your VM, create a folder for your app and use the template:
+
+```bash
+mkdir -p /path/to/myapp && cd /path/to/myapp
+cp /path/to/traefik-setup/templates/app-compose.yaml compose.yaml
+```
+
+Edit `compose.yaml` — change the 4 values marked `CHANGE ME`:
+
 ```yaml
-http:
-  services:
-    app-wrr-service:
-      weighted:
-        services:
-        - name: app-v1-service@docker
-          weight: 9  # 90% traffic
-        - name: app-v2-service@docker
-          weight: 1  # 10% traffic
+services:
+  myapp:
+    image: nginx:alpine                              # your app's image
+    container_name: myapp
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.myapp.rule=Host(`myapp.yourdomain.com`)"
+      - "traefik.http.routers.myapp.entrypoints=websecure"
+      - "traefik.http.routers.myapp.tls.certresolver=letsencrypt"
+      - "traefik.http.services.myapp.loadbalancer.server.port=80"
+    networks:
+      - traefik-network
+
+networks:
+  traefik-network:
+    external: true
 ```
 
-### Middleware Configuration
+### 3. Deploy
 
-**Location:** Defined in `traefik/dynamic-config.yaml` and service labels
+```bash
+docker-compose up -d
+```
 
-Showcases security and performance middleware implementations.
+That's it. SSL is automatic. Your app is live at `https://myapp.yourdomain.com`.
 
-**Available Middlewares:**
+### Removing an app
 
-1. **Rate Limiting:**
-   ```yaml
-   middlewares:
-     test-ratelimit:
-       ratelimit:
-         average: 3      # Average requests allowed
-         burst: 3        # Maximum burst requests
-         period: 10      # Time period (seconds)
-   ```
+```bash
+cd /path/to/myapp
+docker-compose down
+```
 
-2. **IP Allowlist:**
-   ```yaml
-   middlewares:
-     test-ipallowlist:
-       ipAllowList:
-         sourceRange:
-           - "YOUR_IP_ADDRESS"
-   ```
+Then remove the DNS record in Cloudflare.
 
-**Middleware Chaining:**
+## Using Multiple Domains
+
+This setup supports any number of domains. Just point the domain's DNS to your VM IP and use the full domain in the `Host()` rule:
+
 ```yaml
-# Multiple middlewares can be applied
-middlewares: "test-ratelimit@docker,test-ipallowlist@file"
+- "traefik.http.routers.myapp.rule=Host(`myapp.otherdomain.com`)"
 ```
 
-### Zero-Scale with Sablier Plugin
-
-**Location:** `sablier-test-zero-scale/`
-
-Automatically scales services to zero when not in use, reducing resource consumption.
-
-**Key Features:**
-- Automatic service hibernation after inactivity
-- Custom wake-up page with configurable themes
-- Session-based activity tracking
-- Resource cost optimization
-
-**Sablier Configuration:**
-```yaml
-middlewares:
-  my-sablier:
-    plugin:
-      sablier:
-        sablierUrl: http://sablier:10000
-        sessionDuration: 1m
-        names: whoami_sablier
-        dynamic:
-          displayName: Save Your Resources!
-          refreshFrequency: 5s
-          showDetails: "true"
-          theme: ghost
-```
-
-**Benefits:**
-- **Cost Reduction:** Services consume zero resources when idle
-- **Environmental Impact:** Reduced server load and energy consumption
-- **Automatic Management:** No manual intervention required
-
-## Network Architecture
-
-```
-Internet → Traefik (Entry Point) → Docker Services
-    ↓
-[Port 80] → [Port 443] (SSL Redirect)
-    ↓
-Traefik Router → Middleware Chain → Backend Service
-```
-
-**Network Requirements:**
-- External network: `traefik-networks`
-- All services must be connected to this network
-- Traefik container exposes ports 80, 443, and 8080
+No Traefik config changes needed. It just works.
 
 ## Configuration Files
 
-### Core Files
+| File | What | Edit when |
+|------|------|-----------|
+| `.env` | Domain, email, credentials | Initial setup only |
+| `compose.yaml` | Traefik container definition | Rarely (version upgrades) |
+| `traefik/traefik.yaml` | Static config (entrypoints, providers) | Rarely (needs restart) |
+| `traefik/dynamic.yaml` | Dashboard auth, TLS options, security headers | Initial setup only |
+| `templates/app-compose.yaml` | Template for new apps | Never (copy it) |
 
-| File | Purpose | Configuration Type |
-|------|---------|-------------------|
-| `traefik-config.yaml` | Main Traefik configuration | Static |
-| `dynamic-config.yaml` | Routes, services, middleware | Dynamic |
-| `compose.yaml` | Traefik container setup | Infrastructure |
+**Important:** `traefik.yaml` changes require a container restart (`docker-compose restart`). `dynamic.yaml` auto-reloads without restart.
 
-### Service Examples
+## Security
 
-| Directory | Use Case | Features |
-|-----------|----------|----------|
-| `ssl-setup-test/` | SSL/TLS implementation | Auto certificates, rate limiting |
-| `canary-deployment-test/` | Load balancing | Weighted routing, A/B testing |
-| `sablier-test-zero-scale/` | Resource optimization | Auto-scaling, hibernation |
+This setup includes:
 
-## Best Practices
+- **Dashboard** behind basic auth, no insecure port exposed
+- **Docker socket** mounted read-only
+- **Container** runs with `no-new-privileges`
+- **TLS 1.2 minimum** with modern cipher suites
+- **HSTS** enabled with preload
+- **Security headers** (content-type nosniff, server header hidden)
+- **HTTP to HTTPS redirect** on port 80
+- **No telemetry** (`sendAnonymousUsage: false`)
+- **Secrets** in `.env` (excluded from git)
 
-### Security
-- **Always use HTTPS in production**
-- **Implement rate limiting on public endpoints**
-- **Configure IP allowlists for sensitive services**
-- **Regularly update Traefik and plugin versions**
-- **Store certificates in persistent volumes**
+## Adding Middleware to an App
 
-### Performance
-- **Use external networks for service communication**
-- **Enable file watching for dynamic configuration**
-- **Implement health checks for backend services**
-- **Monitor resource usage and scaling patterns**
+You can add rate limiting, IP allowlist, or other middleware per-app via labels:
 
-### Configuration Management
-- **Separate static and dynamic configurations**
-- **Use environment variables for sensitive data**
-- **Version control all configuration files**
-- **Test configurations in staging environments**
+```yaml
+labels:
+  # ... existing labels ...
+  # Rate limiting: 10 requests per second average
+  - "traefik.http.middlewares.myapp-ratelimit.ratelimit.average=10"
+  - "traefik.http.routers.myapp.middlewares=myapp-ratelimit"
+```
 
-### SSL/TLS
-- **Use HTTP-01 challenge for most scenarios**
-- **Ensure DNS points to your server before certificate generation**
-- **Monitor certificate renewal logs**
-- **Backup `acme.json` file regularly**
+To use the global security headers middleware on your app:
+
+```yaml
+  - "traefik.http.routers.myapp.middlewares=security-headers@file"
+```
 
 ## Troubleshooting
 
-### Common Issues
-
-**SSL Certificate Generation Fails:**
+**App not reachable:**
 ```bash
-# Check if domain points to your server
-nslookup your-domain.com
+# Is the container running?
+docker ps | grep myapp
 
-# Verify Traefik logs
-docker logs traefik-test
+# Is it on the right network?
+docker network inspect traefik-network
 
-# Ensure port 80 is accessible from internet
+# Check Traefik logs
+docker logs traefik --tail 50
 ```
 
-**Service Not Accessible:**
+**SSL certificate not issued:**
 ```bash
-# Check if service is on the correct network
-docker network inspect traefik-networks
+# Check Traefik logs for ACME errors
+docker logs traefik 2>&1 | grep acme
 
-# Verify Traefik can reach the service
-docker exec traefik-test ping service-name
+# Verify DNS resolves to your VM
+dig myapp.yourdomain.com
+
+# Make sure port 80 is open (needed for HTTP-01 challenge)
+curl -I http://myapp.yourdomain.com
 ```
 
-**Sablier Not Working:**
+**Dashboard not loading:**
 ```bash
-# Check Sablier logs
-docker logs sablier
+# Check if the router is registered
+docker logs traefik 2>&1 | grep dashboard
 
-# Verify plugin installation
-# Check Traefik dashboard at http://localhost:8080
+# Verify DNS for traefik subdomain
+dig traefik.yourdomain.com
 ```
 
-### Useful Commands
+## Examples
 
-```bash
-# View Traefik configuration
-docker exec traefik-test cat /etc/traefik/traefik.yaml
+The `examples/` folder contains reference configurations:
 
-# Check certificate status
-docker exec traefik-test cat /letsencrypt/acme.json
+- **canary-deployment** — weighted round-robin (90/10 traffic split)
+- **ssl-setup** — rate limiting + IP allowlist
+- **sablier-zero-scale** — auto-hibernate idle containers
 
-# Monitor real-time logs
-docker logs -f traefik-test
+These are for learning. Your production setup is the root config + the template.
 
-# Test service connectivity
-docker exec traefik-test wget -qO- http://service-name:port
-```
+## Cloudflare Settings
 
-### Configuration Validation
+For this setup, use these Cloudflare settings:
 
-- **Traefik Dashboard:** `http://localhost:8080` (when `api.insecure: true`)
-- **Configuration API:** `http://localhost:8080/api/rawdata`
-- **Health Check:** `http://localhost:8080/ping`
+- **SSL/TLS mode:** Full (Strict) — Traefik has valid Let's Encrypt certs
+- **Always Use HTTPS:** Can be ON or OFF (Traefik already redirects)
+- **Proxy status:** DNS only (grey cloud) for all records — Let's Encrypt handles SSL directly
 
-## Additional Resources
-
-- [Traefik Official Documentation](https://doc.traefik.io/traefik/)
-- [Sablier Plugin Documentation](https://github.com/sablierapp/sablier)
-- [Let's Encrypt Documentation](https://letsencrypt.org/docs/)
-- [Docker Networking Guide](https://docs.docker.com/network/)
-
----
-
-**Note:** Remember to replace all placeholder values (`YOUR-DOMAIN`, `YOUR_EMAIL_HERE`, `YOUR_IP_ADDRESS`) with your actual configuration before deployment.
+If you want to use Cloudflare's orange cloud (proxied) later, switch to DNS-01 challenge with a Cloudflare API token. See Traefik's [DNS challenge documentation](https://doc.traefik.io/traefik/v3.0/user-guides/docker-compose/acme-dns/).

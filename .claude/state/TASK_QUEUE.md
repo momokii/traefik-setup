@@ -1,70 +1,21 @@
 # Task Queue
 
-## Security Remediation Tasks
+## Completed Tasks
 
-| Field               | Value                                               |
-|---------------------|-----------------------------------------------------|
-| Task ID             | TASK-001                                            |
-| Name                | Create `.gitignore` for sensitive files             |
-| Priority            | High                                                |
-| Status              | TODO                                                |
-| Complexity          | S                                                   |
-| Depends On          | None                                                |
-| Scope               | Create `.gitignore` excluding `acme.json`, `letsencrypt_data/`, `.env`, `*.env` |
-| Acceptance Criteria | `.gitignore` exists and covers all sensitive file patterns |
-| Security Concerns   | Without this, TLS certificates or secrets could be committed |
-| Source              | Phase 1 security audit (SEC-001)                    |
+| Task ID | Name | Priority | Status |
+|---------|------|----------|--------|
+| TASK-001 | Create `.gitignore` | High | DONE |
+| TASK-002 | Fix unclosed backtick in dynamic config | Medium | DONE (file replaced) |
+| TASK-003 | Add authentication middleware example | Low | DONE (dashboard auth in `dynamic.yaml`) |
+| TASK-004 | Standardize compose.yaml versions | Low | DONE (removed version fields, using root compose) |
+| TASK-005 | Pin `latest` tags to specific versions | Low | DONE (template uses pinned examples) |
 
-| Field               | Value                                               |
-|---------------------|-----------------------------------------------------|
-| Task ID             | TASK-002                                            |
-| Name                | Fix unclosed backtick in dynamic-config.yaml        |
-| Priority            | Medium                                              |
-| Status              | TODO                                                |
-| Complexity          | S                                                   |
-| Depends On          | None                                                |
-| Scope               | Fix `Host(\`YOUR-DOMAIN-HERE)` → `Host(\`YOUR-DOMAIN-HERE\`)` on line 55 of `traefik/dynamic-config.yaml` |
-| Acceptance Criteria | Valid YAML and correct Traefik Host rule syntax     |
-| Security Concerns   | None — placeholder value                            |
-| Source              | Phase 1 audit (SEC-004)                             |
+## Open Tasks
 
-## Feature Tasks
+None. All previous tasks completed in the production revamp.
 
-| Field               | Value                                               |
-|---------------------|-----------------------------------------------------|
-| Task ID             | TASK-003                                            |
-| Name                | Add authentication middleware example               |
-| Priority            | Low                                                 |
-| Status              | TODO                                                |
-| Complexity          | M                                                   |
-| Depends On          | None                                                |
-| Scope               | Create example showing Traefik BasicAuth or ForwardAuth middleware setup |
-| Acceptance Criteria | New directory with compose.yaml, documented in README.md |
-| Security Concerns   | Auth examples must use placeholder credentials only |
-| Source              | Open question from audit                            |
+## Future Considerations
 
-| Field               | Value                                               |
-|---------------------|-----------------------------------------------------|
-| Task ID             | TASK-004                                            |
-| Name                | Standardize compose.yaml version fields             |
-| Priority            | Low                                                 |
-| Status              | TODO                                                |
-| Complexity          | S                                                   |
-| Depends On          | None                                                |
-| Scope               | Change all `version: "3.8"` to `version: "3.9"` for consistency (only `canary-deployment-test/compose.yaml` uses 3.8) |
-| Acceptance Criteria | All compose.yaml files use `version: "3.9"`        |
-| Security Concerns   | None                                                |
-| Source              | Convention inconsistency observed in audit          |
-
-| Field               | Value                                               |
-|---------------------|-----------------------------------------------------|
-| Task ID             | TASK-005                                            |
-| Name                | Pin `latest` tags to specific versions              |
-| Priority            | Low                                                 |
-| Status              | TODO                                                |
-| Complexity          | S                                                   |
-| Depends On          | None                                                |
-| Scope               | Replace `traefik/whoami:latest` with a pinned version in `ssl-setup-test/compose.yaml` and `sablier-test-zero-scale/compose.yaml` |
-| Acceptance Criteria | No `latest` tags in any compose.yaml                |
-| Security Concerns   | Reproducible builds — avoid unexpected image updates |
-| Source              | Best practice gap observed in audit                 |
+- Add DNS-01 challenge option for wildcard certificates
+- Add Docker socket proxy for additional security hardening
+- Add per-app network isolation option

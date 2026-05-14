@@ -1,0 +1,4 @@
+.env
+acme.json
+letsencrypt_data/
+*.log

@@ -1,0 +1,29 @@
+services:
+  traefik:
+    image: traefik:v3.1.5
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro
+      - ./traefik/dynamic.yaml:/etc/traefik/dynamic.yaml
+      - letsencrypt_data:/letsencrypt
+      - traefik_logs:/var/log/traefik
+    environment:
+      - TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL=${ACME_EMAIL}
+    networks:
+      - traefik-network
+
+volumes:
+  letsencrypt_data:
+  traefik_logs:
+
+networks:
+  traefik-network:
+    external: true

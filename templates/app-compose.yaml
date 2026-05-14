@@ -1,0 +1,36 @@
+# Traefik Reverse Proxy - App Template
+#
+# HOW TO USE:
+#   1. Copy this file to your app's directory as compose.yaml
+#   2. Replace all PLACEHOLDER values (search for "CHANGE ME")
+#   3. Add DNS A record in Cloudflare: SUBDOMAIN.yourdomain.com -> your VM IP (proxy OFF)
+#   4. Run: docker-compose up -d
+#   5. SSL is automatic via Let's Encrypt
+#
+# TO REMOVE AN APP:
+#   1. Run: docker-compose down
+#   2. Delete the app's directory
+#   3. Remove the DNS record in Cloudflare
+
+services:
+  myapp:                                # CHANGE ME: container name (lowercase, no spaces)
+    image: nginx:alpine                 # CHANGE ME: your app's Docker image
+    container_name: myapp               # CHANGE ME: same as service name
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      # Router: tells Traefik which domain to route to this app
+      - "traefik.http.routers.myapp.rule=Host(`app.yourdomain.com`)"      # CHANGE ME: subdomain + domain
+      - "traefik.http.routers.myapp.entrypoints=websecure"
+      - "traefik.http.routers.myapp.tls.certresolver=letsencrypt"
+      # Service: tells Traefik which port your app listens on
+      - "traefik.http.services.myapp.loadbalancer.server.port=80"          # CHANGE ME: your app's port
+    networks:
+      - traefik-network
+    # Uncomment below if your app needs persistent storage:
+    # volumes:
+    #   - ./data:/app/data
+
+networks:
+  traefik-network:
+    external: true
