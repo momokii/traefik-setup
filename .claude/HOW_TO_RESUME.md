@@ -26,21 +26,20 @@ Read `.claude/SECURITY_STANDARDS.md` — re-internalize all security requirement
 Determine if working in development or production. Consult `ENVIRONMENT_GUIDE.md` if unsure.
 
 ### Step 8: Read Task-Relevant Docs
-Read the specific `compose.yaml`, `traefik-config.yaml`, or `dynamic-config.yaml` files relevant to the current task.
+Read the specific `compose.yaml`, `traefik/traefik.yaml`, or `traefik/dynamic.yaml` files relevant to the current task.
 
 ### Step 9: Verify Environment is Functional
 ```bash
 # Check Traefik is running
-docker ps
+docker ps | grep traefik
 
-# Confirm Traefik health
-curl http://localhost:8080/ping
-# Expected output: OK
+# Check Traefik logs
+docker logs traefik --tail 20
 ```
 
 If Traefik is not running and the task requires it:
 ```bash
-docker network create traefik-networks 2>/dev/null; cd traefik && docker-compose up -d
+docker network create traefik-network 2>/dev/null; docker compose up -d
 ```
 
 ### Step 10: Begin the Task
@@ -55,4 +54,4 @@ Before closing any session:
 - [ ] `state/DECISIONS_LOG.md` updated if any decision was made
 - [ ] `CODING_STANDARDS.md` updated if new patterns were established
 - [ ] `SECURITY_STANDARDS.md` updated if new findings were identified
-- [ ] `README.md` updated if project-level context changed
+- [ ] `CLAUDE.md` updated if project-level context changed

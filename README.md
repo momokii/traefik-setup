@@ -36,12 +36,13 @@ This only needs to be done once on your VM. All apps + Traefik share this networ
 cp .env.example .env
 ```
 
-Edit `.env` with your real values:
+Edit `.env` with your real email:
 
 ```
-DOMAIN=yourdomain.com
 ACME_EMAIL=your@email.com
 ```
+
+This email is used by Let's Encrypt for certificate expiry notifications.
 
 ### 3. Set up dashboard authentication
 
@@ -61,23 +62,23 @@ users:
 Also update the dashboard domain in `dynamic.yaml`:
 
 ```yaml
-rule: "Host(`traefik.yourdomain.com`)"    # change YOUR-DOMAIN
+rule: "Host(`traefik.yourdomain.com`)"    # replace YOUR-DOMAIN with your domain
 ```
 
-### 4. Add DNS records in Cloudflare
+### 4. Add DNS record in Cloudflare
 
-Add two A records (proxy status = DNS only / grey cloud):
+Add an A record for the dashboard (proxy status = DNS only / grey cloud):
 
 | Type  | Name    | Content      | Proxy     |
 |-------|---------|--------------|-----------|
 | A     | traefik | your VM IP   | DNS only  |
 
-You'll add more records as you deploy apps (one per app).
+You'll add more records as you deploy apps (one per app subdomain).
 
 ### 5. Start Traefik
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 Verify it's running:
@@ -86,7 +87,9 @@ Verify it's running:
 docker logs traefik
 ```
 
-Access the dashboard at `https://traefik.yourdomain.com` with the credentials you set up.
+You should see Traefik start up with no errors. Access the dashboard at `https://traefik.yourdomain.com` with the credentials you set up.
+
+> **Note:** The first time you access the dashboard, Let's Encrypt will provision an SSL certificate. This may take a few seconds. If it fails, check that your DNS is pointing to the correct VM IP and that port 80 is open.
 
 ## Adding a New App
 
@@ -98,7 +101,7 @@ In Cloudflare, add an A record:
 |-------|-----------|------------|-----------|
 | A     | myapp     | your VM IP | DNS only  |
 
-This creates `myapp.yourdomain.com` pointing to your VM.
+This creates `myapp.yourdomain.com` pointing to your VM. The proxy must be OFF (grey cloud) so Let's Encrypt can reach your VM directly for certificate provisioning.
 
 ### 2. Create the app
 
@@ -114,7 +117,7 @@ Edit `compose.yaml` — change the 4 values marked `CHANGE ME`:
 ```yaml
 services:
   myapp:
-    image: nginx:alpine                              # your app's image
+    image: nginx:alpine                              # your app's Docker image
     container_name: myapp
     restart: unless-stopped
     labels:
@@ -134,19 +137,21 @@ networks:
 ### 3. Deploy
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 That's it. SSL is automatic. Your app is live at `https://myapp.yourdomain.com`.
+
+> **First deploy:** The SSL certificate takes a few seconds to provision on first access. Subsequent requests will be fast.
 
 ### Removing an app
 
 ```bash
 cd /path/to/myapp
-docker-compose down
+docker compose down
 ```
 
-Then remove the DNS record in Cloudflare.
+Then remove the DNS record in Cloudflare. The SSL certificate will expire on its own (no action needed).
 
 ## Using Multiple Domains
 
@@ -158,17 +163,57 @@ This setup supports any number of domains. Just point the domain's DNS to your V
 
 No Traefik config changes needed. It just works.
 
+## Adding Middleware to an App
+
+You can add rate limiting, IP allowlist, or other middleware per-app via labels.
+
+### Rate limiting
+
+```yaml
+labels:
+  # ... existing labels ...
+  - "traefik.http.middlewares.myapp-ratelimit.ratelimit.average=10"
+  - "traefik.http.middlewares.myapp-ratelimit.ratelimit.burst=20"
+  - "traefik.http.middlewares.myapp-ratelimit.ratelimit.period=1s"
+  - "traefik.http.routers.myapp.middlewares=myapp-ratelimit"
+```
+
+### IP allowlist (restrict to specific IPs)
+
+```yaml
+labels:
+  # ... existing labels ...
+  - "traefik.http.middlewares.myapp-ipallowlist.ipallowlist.sourcerange=YOUR_IP/32"
+  - "traefik.http.routers.myapp.middlewares=myapp-ipallowlist"
+```
+
+### Security headers (defined in dynamic.yaml)
+
+```yaml
+labels:
+  # ... existing labels ...
+  - "traefik.http.routers.myapp.middlewares=security-headers@file"
+```
+
+### Combining multiple middlewares
+
+Separate middleware names with commas:
+
+```yaml
+  - "traefik.http.routers.myapp.middlewares=security-headers@file,myapp-ratelimit"
+```
+
 ## Configuration Files
 
 | File | What | Edit when |
 |------|------|-----------|
-| `.env` | Domain, email, credentials | Initial setup only |
+| `.env` | ACME email for Let's Encrypt | Initial setup only |
 | `compose.yaml` | Traefik container definition | Rarely (version upgrades) |
 | `traefik/traefik.yaml` | Static config (entrypoints, providers) | Rarely (needs restart) |
-| `traefik/dynamic.yaml` | Dashboard auth, TLS options, security headers | Initial setup only |
+| `traefik/dynamic.yaml` | Dashboard auth, TLS options, security headers, IP allowlist | Initial setup only |
 | `templates/app-compose.yaml` | Template for new apps | Never (copy it) |
 
-**Important:** `traefik.yaml` changes require a container restart (`docker-compose restart`). `dynamic.yaml` auto-reloads without restart.
+**Important:** `traefik.yaml` changes require a container restart (`docker compose restart`). `dynamic.yaml` auto-reloads without restart — but be careful, errors apply immediately.
 
 ## Security
 
@@ -178,33 +223,17 @@ This setup includes:
 - **Docker socket** mounted read-only
 - **Container** runs with `no-new-privileges`
 - **TLS 1.2 minimum** with modern cipher suites
-- **HSTS** enabled with preload
-- **Security headers** (content-type nosniff, server header hidden)
+- **HSTS** enabled with preload (2 years)
+- **Security headers** (content-type nosniff, server header hidden, referrer same-origin)
 - **HTTP to HTTPS redirect** on port 80
 - **No telemetry** (`sendAnonymousUsage: false`)
-- **Secrets** in `.env` (excluded from git)
-
-## Adding Middleware to an App
-
-You can add rate limiting, IP allowlist, or other middleware per-app via labels:
-
-```yaml
-labels:
-  # ... existing labels ...
-  # Rate limiting: 10 requests per second average
-  - "traefik.http.middlewares.myapp-ratelimit.ratelimit.average=10"
-  - "traefik.http.routers.myapp.middlewares=myapp-ratelimit"
-```
-
-To use the global security headers middleware on your app:
-
-```yaml
-  - "traefik.http.routers.myapp.middlewares=security-headers@file"
-```
+- **Secrets** in `.env` (excluded from git via `.gitignore`)
+- **Access logging** enabled for audit trail
 
 ## Troubleshooting
 
-**App not reachable:**
+### App not reachable
+
 ```bash
 # Is the container running?
 docker ps | grep myapp
@@ -216,10 +245,17 @@ docker network inspect traefik-network
 docker logs traefik --tail 50
 ```
 
-**SSL certificate not issued:**
+Common causes:
+- Container not on `traefik-network` — add `networks: [traefik-network]` to compose
+- Missing `traefik.enable=true` label
+- Wrong port in `loadbalancer.server.port` label
+- DNS not pointing to your VM — check with `dig myapp.yourdomain.com`
+
+### SSL certificate not issued
+
 ```bash
 # Check Traefik logs for ACME errors
-docker logs traefik 2>&1 | grep acme
+docker logs traefik 2>&1 | grep -i acme
 
 # Verify DNS resolves to your VM
 dig myapp.yourdomain.com
@@ -228,24 +264,109 @@ dig myapp.yourdomain.com
 curl -I http://myapp.yourdomain.com
 ```
 
-**Dashboard not loading:**
+Common causes:
+- DNS not propagated yet — wait a few minutes after adding the record
+- Port 80 blocked by firewall — Let's Encrypt needs to reach port 80 for the challenge
+- Cloudflare proxy is ON (orange cloud) — switch to DNS only (grey cloud)
+- Rate limit hit — see below
+
+### Let's Encrypt rate limits
+
+Let's Encrypt limits certificate issuance. If you're testing, you might hit these limits:
+- **5 failed validations per hour** per domain
+- **50 certificates per week** per registered domain
+- **5 duplicate certificates per week**
+
+If you hit a rate limit during testing, wait or use the [staging server](#using-staging-server-for-testing) first.
+
+### Dashboard not loading
+
 ```bash
 # Check if the router is registered
 docker logs traefik 2>&1 | grep dashboard
 
 # Verify DNS for traefik subdomain
 dig traefik.yourdomain.com
+
+# Test without SSL (should redirect to HTTPS)
+curl -I http://traefik.yourdomain.com
 ```
 
-## Examples
+Common causes:
+- Dashboard domain not updated in `dynamic.yaml` — still says `YOUR-DOMAIN`
+- DNS record not added for `traefik` subdomain
+- htpasswd hash incorrect — regenerate with the `htpasswd` command
 
-The `examples/` folder contains reference configurations:
+### Traefik won't start
 
-- **canary-deployment** — weighted round-robin (90/10 traffic split)
-- **ssl-setup** — rate limiting + IP allowlist
-- **sablier-zero-scale** — auto-hibernate idle containers
+```bash
+# Check for config errors
+docker logs traefik 2>&1 | head -20
 
-These are for learning. Your production setup is the root config + the template.
+# Validate compose file
+docker compose config
+
+# Common causes:
+# - Port 80 or 443 already in use by another process
+# - traefik-network doesn't exist — run: docker network create traefik-network
+# - Invalid YAML in config files
+```
+
+## Advanced
+
+### Using staging server for testing
+
+To avoid Let's Encrypt rate limits while testing, temporarily use the staging server. Edit `traefik/traefik.yaml` and add the `caServer` line:
+
+```yaml
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+      storage: "/letsencrypt/acme.json"
+      httpChallenge:
+        entryPoint: web
+```
+
+Staging certificates will show as untrusted in browsers (that's expected). Remove the `caServer` line when ready for production.
+
+### Upgrading Traefik
+
+1. Check the [Traefik release notes](https://github.com/traefik/traefik/releases) for breaking changes
+2. Update the image version in `compose.yaml`:
+   ```yaml
+   image: traefik:v3.x.x
+   ```
+3. Restart:
+   ```bash
+   docker compose up -d
+   ```
+4. Verify:
+   ```bash
+   docker logs traefik --tail 20
+   ```
+
+### Using Cloudflare proxy (orange cloud)
+
+If you want to use Cloudflare's proxy (orange cloud) instead of DNS-only:
+1. Set Cloudflare SSL/TLS mode to **Full (Strict)**
+2. Switch to DNS-01 challenge (HTTP-01 doesn't work behind proxy)
+3. See Traefik's [DNS challenge documentation](https://doc.traefik.io/traefik/v3.0/user-guides/docker-compose/acme-dns/)
+
+### Custom error pages
+
+You can add a custom error page middleware in `dynamic.yaml`:
+
+```yaml
+middlewares:
+  my-error-pages:
+    errors:
+      status:
+        - "404"
+        - "500-599"
+      query: "/{status}.html"
+      service: error-pages-service
+```
 
 ## Cloudflare Settings
 
@@ -255,4 +376,12 @@ For this setup, use these Cloudflare settings:
 - **Always Use HTTPS:** Can be ON or OFF (Traefik already redirects)
 - **Proxy status:** DNS only (grey cloud) for all records — Let's Encrypt handles SSL directly
 
-If you want to use Cloudflare's orange cloud (proxied) later, switch to DNS-01 challenge with a Cloudflare API token. See Traefik's [DNS challenge documentation](https://doc.traefik.io/traefik/v3.0/user-guides/docker-compose/acme-dns/).
+## Examples
+
+The `examples/` folder contains reference configurations:
+
+- **canary-deployment** — weighted round-robin (90/10 traffic split) between two nginx services
+- **ssl-setup** — rate limiting (3 req/10sec) + IP allowlist
+- **sablier-zero-scale** — auto-hibernate idle containers with loading page
+
+These are for learning. Your production setup is the root config + the template.

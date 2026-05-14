@@ -2,7 +2,7 @@
 #
 # HOW TO USE:
 #   1. Copy this file to your app's directory as compose.yaml
-#   2. Replace all PLACEHOLDER values (search for "CHANGE ME")
+#   2. Replace all CHANGE ME values (search for "CHANGE ME")
 #   3. Add DNS A record in Cloudflare: SUBDOMAIN.yourdomain.com -> your VM IP (proxy OFF)
 #   4. Run: docker-compose up -d
 #   5. SSL is automatic via Let's Encrypt
@@ -11,6 +11,15 @@
 #   1. Run: docker-compose down
 #   2. Delete the app's directory
 #   3. Remove the DNS record in Cloudflare
+#
+# OPTIONAL MIDDLEWARE:
+#   Add security headers to your app (defined in traefik/dynamic.yaml):
+#     - "traefik.http.routers.myapp.middlewares=security-headers@file"
+#   Add rate limiting:
+#     - "traefik.http.middlewares.myapp-ratelimit.ratelimit.average=10"
+#     - "traefik.http.routers.myapp.middlewares=myapp-ratelimit"
+#   Combine multiple middlewares (comma-separated):
+#     - "traefik.http.routers.myapp.middlewares=security-headers@file,myapp-ratelimit"
 
 services:
   myapp:                                # CHANGE ME: container name (lowercase, no spaces)

@@ -28,6 +28,11 @@ http:
         customResponseHeaders:
           server: ""
 
+    test-ipallowlist:
+      ipAllowList:
+        sourceRange:
+          - "YOUR_IP_ADDRESS"
+
 tls:
   options:
     default:

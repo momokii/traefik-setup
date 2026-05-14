@@ -16,7 +16,7 @@ docker-compose restart                          # Apply static config changes
 
 ```
 compose.yaml              → Traefik container (ports 80/443, HTTP/3)
-.env                      → Secrets: domain, email, dashboard creds (gitignored)
+.env                      → ACME email for Let's Encrypt (gitignored)
 .env.example              → Template for .env
 traefik/
   traefik.yaml            → Static config (entrypoints, providers, cert resolver)

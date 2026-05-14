@@ -28,17 +28,17 @@ services:
       # entrypoint HTTPS
       - "traefik.http.routers.app1-router.entrypoints=websecure"
       # resolver for the tls cert
-      - "traefik.http.routers.app1-router.tls.certresolver=myresolver"
+      - "traefik.http.routers.app1-router.tls.certresolver=letsencrypt"
 
       # if need using middlewares that define at labels services, make sure apply the middlewares that we need to use to this setup, also beside that midddlewares that created here, also can use the middlewares maybe that we setup at the dynamic config traefik
       # below example using 2 middlewares, one is defined at the labels services and the other one is defined at the dynamic config file, you can differentiate it by the suffix after the @ sign
       - "traefik.http.routers.app1-router.middlewares=test-ratelimit@docker,test-ipallowlist@file"
 
     networks:
-      - traefik-networks
+      - traefik-network
 
 networks:
   default:
-  traefik-networks:
+  traefik-network:
     external: true
 

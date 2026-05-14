@@ -8,9 +8,9 @@ services:
       - start
       - --provider.name=docker
     volumes:
-      - '/var/run/docker.sock:/var/run/docker.sock'
+      - '/var/run/docker.sock:/var/run/docker.sock:ro'
     networks:
-      - traefik-networks
+      - traefik-network
 
   # Simple service to test sablier using the whoami image
   whoami:
@@ -18,10 +18,10 @@ services:
     container_name: whoami_sablier
     restart: unless-stopped
     networks:
-      - traefik-networks
+      - traefik-network
 
 networks:
   default:
-  traefik-networks:
+  traefik-network:
     external: true
 

@@ -8,10 +8,10 @@
 4. Read `.claude/CODING_STANDARDS.md` — internalize conventions before editing YAML
 5. Read `.claude/SECURITY_STANDARDS.md` — internalize security requirements
 6. Identify the active environment — consult `ENVIRONMENT_GUIDE.md`
-7. Verify Traefik and services are healthy before modifying configuration:
+7. Verify Traefik is healthy before modifying configuration:
    ```bash
-   docker ps
-   curl http://localhost:8080/ping
+   docker ps | grep traefik
+   docker logs traefik --tail 10
    ```
 
 ## During Implementation
@@ -20,15 +20,14 @@
 - Never delete, rename, or overwrite existing YAML files without explicit user instruction
 - Never introduce a new Docker image or plugin without surfacing the proposal to the user and receiving explicit confirmation
 - Always follow the patterns and conventions in `CODING_STANDARDS.md` — do not introduce new patterns without logging them in `DECISIONS_LOG.md`
-- When modifying `dynamic-config.yaml`, be aware that Traefik auto-reloads this file on change — test changes carefully since they take effect immediately
-- All new configuration examples must include inline comments explaining the purpose of each section, matching the existing comment style in this repository
-- Never commit files with real domain names, email addresses, or IP addresses — always use the placeholder pattern (`YOUR-DOMAIN`, `YOUR_EMAIL_HERE`, `YOUR_IP_ADDRESS`)
+- When modifying `dynamic.yaml`, be aware that Traefik auto-reloads this file on change — test changes carefully since they take effect immediately
+- Never commit files with real domain names, email addresses, or IP addresses — always use the placeholder pattern
 
 ## Configuration Validation Rules
 
 - After modifying any Traefik configuration, validate the YAML syntax
-- After modifying `dynamic-config.yaml`, verify Traefik picked up the change via the dashboard or logs
-- After modifying any `compose.yaml`, validate with `docker-compose config`
+- After modifying `dynamic.yaml`, verify Traefik picked up the change via logs
+- After modifying `compose.yaml`, validate with `docker compose config`
 - Never leave a configuration in a broken state — if a change fails, revert immediately
 
 ## Security Rules — Non-Negotiable
@@ -42,9 +41,8 @@
 ## Environment Awareness Rules
 
 - Always identify the active environment before running any command
-- In development: proceed with standard workflow
-- In staging or production: present a written plan and receive explicit confirmation before executing any change
-- Never expose the Traefik dashboard (port 8080) in production without authentication
+- In production: present a written plan and receive explicit confirmation before executing any change
+- Never expose the Traefik dashboard without authentication
 - Verify `.gitignore` exists and covers sensitive files before the first commit of any session
 
 ## Session End — Mandatory Before Closing
@@ -54,7 +52,7 @@
 - Log any significant decision in `state/DECISIONS_LOG.md`
 - Update `CODING_STANDARDS.md` if new patterns were established
 - Update `SECURITY_STANDARDS.md` if new security findings were identified
-- Update `README.md` if project-level context changed materially
+- Update `CLAUDE.md` if project-level context changed materially
 
 ## Self-Maintenance Directive
 
