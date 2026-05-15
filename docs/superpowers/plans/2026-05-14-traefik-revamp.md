@@ -56,7 +56,7 @@ DASHBOARD_PASSWORD=changeme
 ```yaml
 services:
   traefik:
-    image: traefik:v3.1.5
+    image: traefik:v3.7.1
     container_name: traefik
     restart: unless-stopped
     security_opt:
@@ -333,7 +333,7 @@ Expected: Valid output, no errors
 
 - [ ] **Step 2: Validate Traefik static config**
 
-Run: `docker run --rm -v $(pwd)/traefik/traefik.yaml:/etc/traefik/traefik.yaml traefik:v3.1.5 validate /etc/traefik/traefik.yaml`
+Run: `docker run --rm -v $(pwd)/traefik/traefik.yaml:/etc/traefik/traefik.yaml traefik:v3.7.1 validate /etc/traefik/traefik.yaml`
 Expected: "Configuration loaded successfully" or similar
 
 - [ ] **Step 3: Review all changes**

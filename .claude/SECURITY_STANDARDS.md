@@ -46,9 +46,10 @@ All previous audit findings (SEC-001 through SEC-005) resolved in the production
 - No real domains, emails, or credentials in committed files
 
 ### Logging
-- Access logging enabled (`/var/log/traefik/access.log`)
-- Traefik logs at INFO level (`/var/log/traefik/traefik.log`)
+- Access logging enabled (both `/var/log/traefik/access.log` and stdout)
+- Traefik logs at INFO level (both `/var/log/traefik/traefik.log` and stdout)
 - Log buffering for performance
+- Dual logging for flexibility: `docker logs` for quick checks, files for persistence
 
 ## Standing Security Requirements
 

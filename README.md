@@ -195,6 +195,23 @@ The old container is replaced. No downtime if the new image starts successfully.
 2. Replace the hash in `traefik/dynamic.yaml`
 3. Done — dynamic.yaml auto-reloads, no restart needed
 
+### Viewing logs
+
+This setup logs to **both files and stdout** for maximum flexibility:
+
+```bash
+# View real-time logs (recommended)
+docker logs traefik --tail 50 --follow
+
+# View logs from the file (persistent)
+docker exec traefik tail -f /var/log/traefik/traefik.log
+
+# View access logs
+docker exec traefik tail -f /var/log/traefik/access.log
+```
+
+Logs are stored in the `traefik_logs` Docker volume at `/var/log/traefik/` and persist across container restarts. Use `docker logs` for quick debugging and the files for historical analysis.
+
 ### Enabling debug logging
 
 Edit `traefik/traefik.yaml` and change the log level:
@@ -294,7 +311,7 @@ Separate middleware names with commas:
 |------|------|-----------|
 | `.env` | ACME email for Let's Encrypt | Initial setup only |
 | `compose.yaml` | Traefik container definition | Rarely (version upgrades) |
-| `traefik/traefik.yaml` | Static config (entrypoints, providers) | Rarely (needs restart) |
+| `traefik/traefik.yaml` | Static config (entrypoints, providers, logging) | When changing log level or restart needed |
 | `traefik/dynamic.yaml` | Dashboard auth, TLS options, security headers, IP allowlist | Initial setup only |
 | `templates/app-compose.yaml` | Template for new apps | Never (copy it) |
 
@@ -393,6 +410,26 @@ Common causes:
 - Dashboard domain not updated in `dynamic.yaml` — still says `YOUR-DOMAIN`
 - DNS record not added for `traefik` subdomain
 - htpasswd hash incorrect — regenerate with the `htpasswd` command
+
+### Encoded characters warning in logs
+
+You may see this warning on startup:
+
+```
+WRN Traefik can reject some encoded characters in the request path.
+```
+
+This is **informational, not an error**. Traefik v3.6.7+ tightened URL encoding security per RFC 3986. Most apps work fine with the default settings.
+
+If your backend app uses non-standard URL encoding and you see "404" or "split view" issues, you can relax this restriction by adding to `traefik/traefik.yaml`:
+
+```yaml
+experimental:
+  encodedCharacters:
+    percentMode: RejectUnvalid  # or AllowAll if needed (less secure)
+```
+
+For most setups, you can ignore this warning.
 
 ### Traefik won't start
 

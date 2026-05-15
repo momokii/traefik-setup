@@ -103,7 +103,7 @@ certificatesResolvers:
 ```yaml
 services:
   traefik:
-    image: traefik:v3.1.5
+    image: traefik:v3.7.1
     container_name: traefik
     restart: unless-stopped
     security_opt:
