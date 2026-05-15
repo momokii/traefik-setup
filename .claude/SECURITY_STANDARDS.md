@@ -55,5 +55,5 @@ All previous audit findings (SEC-001 through SEC-005) resolved in the production
 - Never commit `.env` or `acme.json`
 - Never set `api.insecure: true`
 - Never mount Docker socket without `:ro`
-- Always validate configs before deploying (`docker-compose config`)
+- Always validate configs before deploying (`docker compose config`)
 - Pin all Docker image versions — no `latest` in production

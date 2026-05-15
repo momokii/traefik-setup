@@ -16,7 +16,7 @@ htpasswd -nb admin "your-password" | sed -e 's/\$/\$\$/g'
 # Also update the domain in the dashboard router rule
 
 # 4. Start Traefik
-docker-compose up -d
+docker compose up -d
 ```
 
 ## Verified Commands
@@ -29,23 +29,23 @@ docker ps | grep traefik
 
 ### Validate Configuration
 ```bash
-docker-compose config                    # Validate compose syntax
+docker compose config                    # Validate compose syntax
 docker logs traefik 2>&1 | grep -i error # Check for config errors
 ```
 
 ### Stop Traefik
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ## Configuration Files
 
 | File | Type | Reload Required? |
 |---|---|---|
-| `traefik/traefik.yaml` | Static | Yes — `docker-compose restart` |
+| `traefik/traefik.yaml` | Static | Yes — `docker compose restart` |
 | `traefik/dynamic.yaml` | Dynamic | No — auto-reloaded on file change |
-| `compose.yaml` | Infrastructure | Yes — `docker-compose up -d` |
-| `.env` | Secrets | Yes — `docker-compose up -d` |
+| `compose.yaml` | Infrastructure | Yes — `docker compose up -d` |
+| `.env` | Secrets | Yes — `docker compose up -d` |
 
 ## Adding a New App
 
@@ -53,7 +53,7 @@ docker-compose down
 # On your VM, in the app's directory:
 cp /path/to/traefik-setup/templates/app-compose.yaml compose.yaml
 # Edit the 4 CHANGE ME values
-docker-compose up -d
+docker compose up -d
 ```
 
 ## Gotchas

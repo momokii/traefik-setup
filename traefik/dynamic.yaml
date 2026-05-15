@@ -1,6 +1,5 @@
 http:
   routers:
-    # Dashboard — secured with basic auth
     dashboard:
       rule: "Host(`traefik.YOUR-DOMAIN`)"
       entryPoints:
@@ -11,9 +10,8 @@ http:
       tls:
         certResolver: letsencrypt
 
-    # EXAMPLE: Canary deployment weighted router
-    # Requires: examples/canary-deployment/compose.yaml running
-    # Change YOUR-AB-TEST-DOMAIN to your domain
+    ## EXAMPLE — Canary deployment (see examples/canary-deployment/README.md)
+    ## Uncomment the block below and change YOUR-AB-TEST-DOMAIN:
     # app-ab-test-router:
     #   rule: "Host(`YOUR-AB-TEST-DOMAIN`)"
     #   entryPoints:
@@ -22,10 +20,8 @@ http:
     #   tls:
     #     certResolver: letsencrypt
 
-    # EXAMPLE: Sablier zero-scale router
-    # Requires: examples/sablier-zero-scale/compose.yaml running
-    # AND sablier plugin enabled in traefik.yaml (see commented section below)
-    # Change YOUR-DOMAIN to your domain
+    ## EXAMPLE — Sablier zero-scale (see examples/sablier-zero-scale/README.md)
+    ## Uncomment the block below and change YOUR-DOMAIN:
     # whoami-sablier-router:
     #   rule: "Host(`YOUR-DOMAIN`)"
     #   entryPoints:
@@ -37,8 +33,8 @@ http:
     #     certResolver: letsencrypt
 
   services:
-    # EXAMPLE: Canary deployment weighted round-robin (90/10 split)
-    # Requires: examples/canary-deployment/compose.yaml running
+    ## EXAMPLE — Canary weighted round-robin (see examples/canary-deployment/README.md)
+    ## Uncomment the block below:
     # app-wrr-service:
     #   weighted:
     #     services:
@@ -47,20 +43,19 @@ http:
     #       - name: app-v2-service@docker
     #         weight: 1
 
-    # EXAMPLE: Sablier zero-scale service
+    ## EXAMPLE — Sablier service (see examples/sablier-zero-scale/README.md)
+    ## Uncomment the block below:
     # whoami-sablier-service:
     #   loadBalancer:
     #     servers:
     #       - url: "http://whoami_sablier/"
 
   middlewares:
-    # Dashboard authentication — replace with your htpasswd hash
     dashboard-auth:
       basicAuth:
         users:
           - "admin:$$apr1$$placeholder$$replace_with_your_htpasswd_hash"
 
-    # Global security headers — apply to any app via security-headers@file
     security-headers:
       headers:
         stsSeconds: 63072000
@@ -73,15 +68,13 @@ http:
         customResponseHeaders:
           server: ""
 
-    # EXAMPLE: IP allowlist for SSL example
-    # Replace YOUR_IP_ADDRESS with your actual IP
     test-ipallowlist:
       ipAllowList:
         sourceRange:
           - "YOUR_IP_ADDRESS"
 
-    # EXAMPLE: Sablier zero-scale middleware
-    # Requires: sablier plugin enabled in traefik.yaml AND sablier container running
+    ## EXAMPLE — Sablier middleware (see examples/sablier-zero-scale/README.md)
+    ## Uncomment the block below:
     # my-sablier:
     #   plugin:
     #     sablier:

@@ -6,10 +6,10 @@ Production-ready Traefik reverse proxy for Docker. Drop-in app deployment with a
 
 ```bash
 docker network create traefik-network           # First time — required
-docker-compose up -d                            # Start Traefik
+docker compose up -d                            # Start Traefik
 docker logs traefik                             # Check status
-docker-compose config                           # Validate compose syntax
-docker-compose restart                          # Apply static config changes
+docker compose config                           # Validate compose syntax
+docker compose restart                          # Apply static config changes
 ```
 
 ## Structure
@@ -31,7 +31,7 @@ examples/                 → Reference configs (canary, ssl, sablier)
 1. Add DNS A record in Cloudflare (subdomain → VM IP, proxy OFF)
 2. Copy `templates/app-compose.yaml` to app's folder
 3. Replace the 4 `CHANGE ME` values (name, image, domain, port)
-4. `docker-compose up -d`
+4. `docker compose up -d`
 5. SSL is automatic
 
 ## Conventions
@@ -42,7 +42,7 @@ examples/                 → Reference configs (canary, ssl, sablier)
 - Docker socket always mounted `:ro`
 - Traefik routing via Docker labels on each app's compose
 - `dynamic.yaml` auto-reloads — no restart needed
-- `traefik.yaml` changes require `docker-compose restart`
+- `traefik.yaml` changes require `docker compose restart`
 
 ## Security
 
