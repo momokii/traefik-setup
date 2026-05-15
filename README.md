@@ -197,20 +197,20 @@ The old container is replaced. No downtime if the new image starts successfully.
 
 ### Viewing logs
 
-This setup logs to **both files and stdout** for maximum flexibility:
+This setup logs to files inside the container. Use `docker exec` to view them:
 
 ```bash
-# View real-time logs (recommended)
-docker logs traefik --tail 50 --follow
-
-# View logs from the file (persistent)
+# View Traefik logs in real-time
 docker exec traefik tail -f /var/log/traefik/traefik.log
+
+# View recent logs
+docker exec traefik tail -50 /var/log/traefik/traefik.log
 
 # View access logs
 docker exec traefik tail -f /var/log/traefik/access.log
 ```
 
-Logs are stored in the `traefik_logs` Docker volume at `/var/log/traefik/` and persist across container restarts. Use `docker logs` for quick debugging and the files for historical analysis.
+Logs are stored in the `traefik_logs` Docker volume at `/var/log/traefik/` and persist across container restarts.
 
 ### Enabling debug logging
 

@@ -5,12 +5,10 @@ global:
 log:
   level: INFO
   filePath: "/var/log/traefik/traefik.log"
-  stdout: true
 
 accessLog:
   filePath: "/var/log/traefik/access.log"
   bufferingSize: 100
-  stdout: true
 
 api:
   dashboard: true
