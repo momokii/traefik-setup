@@ -4,11 +4,11 @@
 #   1. Copy this file to your app's directory as compose.yaml
 #   2. Replace all CHANGE ME values (search for "CHANGE ME")
 #   3. Add DNS A record in Cloudflare: SUBDOMAIN.yourdomain.com -> your VM IP (proxy OFF)
-#   4. Run: docker-compose up -d
+#   4. Run: docker compose up -d
 #   5. SSL is automatic via Let's Encrypt
 #
 # TO REMOVE AN APP:
-#   1. Run: docker-compose down
+#   1. Run: docker compose down
 #   2. Delete the app's directory
 #   3. Remove the DNS record in Cloudflare
 #

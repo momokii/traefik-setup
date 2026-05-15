@@ -378,10 +378,18 @@ For this setup, use these Cloudflare settings:
 
 ## Examples
 
-The `examples/` folder contains reference configurations:
+The `examples/` folder contains reference configurations. Each example has its own `README.md` with activation instructions.
 
-- **canary-deployment** — weighted round-robin (90/10 traffic split) between two nginx services
-- **ssl-setup** — rate limiting (3 req/10sec) + IP allowlist
-- **sablier-zero-scale** — auto-hibernate idle containers with loading page
+### SSL Setup (`examples/ssl-setup/`)
+
+whoami service with rate limiting (3 req/10sec) and IP allowlist. Ready to use — just replace the domain and IP in the labels.
+
+### Canary Deployment (`examples/canary-deployment/`)
+
+Weighted round-robin (90/10 traffic split) between two nginx services. Requires uncommenting the WRR service and router in `traefik/dynamic.yaml`. See `examples/canary-deployment/README.md`.
+
+### Sablier Zero-Scale (`examples/sablier-zero-scale/`)
+
+Auto-hibernate idle containers with a loading page. Requires uncommenting the plugin in `traefik/traefik.yaml` AND the router/service/middleware in `traefik/dynamic.yaml`. See `examples/sablier-zero-scale/README.md`.
 
 These are for learning. Your production setup is the root config + the template.

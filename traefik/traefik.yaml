@@ -43,3 +43,11 @@ certificatesResolvers:
       storage: "/letsencrypt/acme.json"
       httpChallenge:
         entryPoint: web
+
+# EXAMPLE: Sablier plugin for zero-scale example
+# Uncomment to enable examples/sablier-zero-scale/
+# experimental:
+#   plugins:
+#     sablier:
+#       moduleName: "github.com/sablierapp/sablier"
+#       version: "v1.10.1"
