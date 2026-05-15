@@ -12,6 +12,10 @@
 #   2. Delete the app's directory
 #   3. Remove the DNS record in Cloudflare
 #
+# TO UPDATE AN APP (new image version):
+#   1. Edit compose.yaml with the new image
+#   2. Run: docker compose pull && docker compose up -d
+#
 # OPTIONAL MIDDLEWARE:
 #   Add security headers to your app (defined in traefik/dynamic.yaml):
 #     - "traefik.http.routers.myapp.middlewares=security-headers@file"
@@ -36,7 +40,11 @@ services:
       - "traefik.http.services.myapp.loadbalancer.server.port=80"          # CHANGE ME: your app's port
     networks:
       - traefik-network
-    # Uncomment below if your app needs persistent storage:
+    # Uncomment if your app needs environment variables:
+    # environment:
+    #   - DATABASE_URL=postgres://...
+    #   - API_KEY=your-key
+    # Uncomment if your app needs persistent storage:
     # volumes:
     #   - ./data:/app/data
 

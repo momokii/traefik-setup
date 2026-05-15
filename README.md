@@ -16,9 +16,32 @@ Each app is a separate folder with its own `compose.yaml`. Apps self-register wi
 
 ## Prerequisites
 
-- Ubuntu/Debian VM with Docker + Docker Compose installed
+- Ubuntu/Debian VM
 - A domain name using Cloudflare DNS
 - Ports 80 and 443 open on your VM firewall
+
+### Installing Docker (if not already installed)
+
+```bash
+sudo apt update
+sudo apt install docker.io docker-compose-plugin apache2-utils -y
+sudo usermod -aG docker $USER
+# Log out and back in for the docker group to take effect
+```
+
+> `apache2-utils` provides the `htpasswd` command needed for dashboard authentication.
+
+### Opening firewall ports
+
+If your VM uses `ufw`:
+
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 443/udp
+```
+
+> **Note:** Docker may bypass `ufw` rules by default. If ports appear blocked, check Docker's iptables settings or ensure `DEFAULT_FORWARD_POLICY="ACCEPT"` in `/etc/default/ufw`.
 
 ## One-Time Setup
 
@@ -28,7 +51,7 @@ Each app is a separate folder with its own `compose.yaml`. Apps self-register wi
 docker network create traefik-network
 ```
 
-This only needs to be done once on your VM. All apps + Traefik share this network.
+This only needs to be done once on your VM. All apps + Traefik share this network. The network survives VM reboots.
 
 ### 2. Configure your environment
 
@@ -152,6 +175,68 @@ docker compose down
 ```
 
 Then remove the DNS record in Cloudflare. The SSL certificate will expire on its own (no action needed).
+
+## Day-to-Day Operations
+
+### Updating an app (new image version)
+
+```bash
+cd /path/to/myapp
+# Edit compose.yaml with the new image version
+docker compose pull
+docker compose up -d
+```
+
+The old container is replaced. No downtime if the new image starts successfully.
+
+### Changing the dashboard password
+
+1. Generate a new hash: `htpasswd -nb admin "new-password" | sed -e 's/\$/\$\$/g'`
+2. Replace the hash in `traefik/dynamic.yaml`
+3. Done — dynamic.yaml auto-reloads, no restart needed
+
+### Enabling debug logging
+
+Edit `traefik/traefik.yaml` and change the log level:
+
+```yaml
+log:
+  level: DEBUG    # change from INFO to DEBUG
+```
+
+Then restart Traefik:
+
+```bash
+docker compose restart
+```
+
+Remember to change back to `INFO` when done — debug logs are verbose.
+
+### After a VM reboot
+
+All containers with `restart: unless-stopped` start automatically. The Docker network and named volumes persist across reboots. No manual intervention needed.
+
+If Traefik doesn't come back after reboot:
+
+```bash
+docker ps                          # check if container is running
+docker logs traefik --tail 20      # check for errors
+docker compose up -d               # manually start if needed
+```
+
+### Backing up SSL certificates
+
+Certificates are stored in the `letsencrypt_data` Docker volume. To back up:
+
+```bash
+docker run --rm -v traefik-setup_letsencrypt_data:/data -v $(pwd):/backup alpine tar czf /backup/letsencrypt-backup.tar.gz -C /data .
+```
+
+To restore:
+
+```bash
+docker run --rm -v traefik-setup_letsencrypt_data:/data -v $(pwd):/backup alpine tar xzf /backup/letsencrypt-backup.tar.gz -C /data
+```
 
 ## Using Multiple Domains
 
@@ -279,6 +364,18 @@ Let's Encrypt limits certificate issuance. If you're testing, you might hit thes
 
 If you hit a rate limit during testing, wait or use the [staging server](#using-staging-server-for-testing) first.
 
+### SSL cert failed — how to retry
+
+If a certificate request failed and you've fixed the issue (DNS, firewall, etc.):
+
+```bash
+# Traefik retries automatically on next request. Just access the domain again.
+# If it still fails, check logs for the specific error:
+docker logs traefik 2>&1 | grep -i acme
+```
+
+Traefik retries failed certificates automatically. You don't need to delete `acme.json` or restart.
+
 ### Dashboard not loading
 
 ```bash
@@ -311,6 +408,18 @@ docker compose config
 # - traefik-network doesn't exist — run: docker network create traefik-network
 # - Invalid YAML in config files
 ```
+
+### Container name conflict
+
+If you see `container name "myapp" is already in use`:
+
+```bash
+# The old container is still there. Remove it:
+docker rm -f myapp
+docker compose up -d
+```
+
+This happens if you change the `container_name` in compose but the old container is still running.
 
 ## Advanced
 
