@@ -144,7 +144,7 @@ Contains only shared infrastructure:
 
 The dashboard basic auth credentials are hashed using `htpasswd` and stored directly in `dynamic.yaml`. The README will include the exact command to generate the hash:
 ```bash
-htpasswd -nb admin changeme | sed -e 's/\$/\$\$/g'
+htpasswd -nb admin changeme
 ```
 The user runs this once with their chosen username/password and pastes the output into `dynamic.yaml`.
 

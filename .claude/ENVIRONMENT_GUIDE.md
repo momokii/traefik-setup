@@ -11,8 +11,9 @@ cp .env.example .env
 # Edit .env with real domain, email, credentials
 
 # 3. Set up dashboard auth in traefik/dynamic.yaml
-htpasswd -nb admin "your-password" | sed -e 's/\$/\$\$/g'
-# Paste output into dynamic.yaml under dashboard-auth.users
+htpasswd -nb admin "your-password"
+# Paste output directly into dynamic.yaml under dashboard-auth.users
+# Use single $ (NOT double $$) — file provider doesn't need escaping
 # Also update the domain in the dashboard router rule
 
 # 4. Start Traefik

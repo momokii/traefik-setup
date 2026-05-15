@@ -72,14 +72,16 @@ This email is used by Let's Encrypt for certificate expiry notifications.
 Generate a password hash for the Traefik dashboard:
 
 ```bash
-htpasswd -nb admin "your-password" | sed -e 's/\$/\$\$/g'
+htpasswd -nb admin "your-password"
 ```
 
-Copy the output (looks like `admin:$$apr1$$...$$...`) and paste it into `traefik/dynamic.yaml`, replacing the placeholder line under `dashboard-auth`:
+> **Important:** Do NOT pipe through `sed` to double the `$` signs. Traefik's file provider (dynamic.yaml) requires single `$` in the hash. The `$$` doubling is only for Docker Compose labels and environment variables.
+
+Copy the output (looks like `admin:$apr1$...$...`) and paste it into `traefik/dynamic.yaml`, replacing the placeholder line under `dashboard-auth`:
 
 ```yaml
 users:
-  - "admin:$$apr1$$...$$..."   # your htpasswd output here
+  - "admin:$apr1$...$..."   # your htpasswd output here
 ```
 
 Also update the dashboard domain in `dynamic.yaml`:
@@ -191,7 +193,7 @@ The old container is replaced. No downtime if the new image starts successfully.
 
 ### Changing the dashboard password
 
-1. Generate a new hash: `htpasswd -nb admin "new-password" | sed -e 's/\$/\$\$/g'`
+1. Generate a new hash: `htpasswd -nb admin "new-password"`
 2. Replace the hash in `traefik/dynamic.yaml`
 3. Done — dynamic.yaml auto-reloads, no restart needed
 
@@ -409,7 +411,7 @@ curl -I http://traefik.yourdomain.com
 Common causes:
 - Dashboard domain not updated in `dynamic.yaml` — still says `YOUR-DOMAIN`
 - DNS record not added for `traefik` subdomain
-- htpasswd hash incorrect — regenerate with the `htpasswd` command
+- htpasswd hash incorrect — regenerate with `htpasswd -nb admin "password"` (use single `$`, not `$$`)
 
 ### Encoded characters warning in logs
 

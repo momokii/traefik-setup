@@ -178,7 +178,7 @@ http:
     dashboard-auth:
       basicAuth:
         users:
-          - "admin:$$apr1$$placeholder$$replace_with_htpasswd_hash"
+          - "admin:$apr1$placeholder$replace_with_htpasswd_hash"
 
     security-headers:
       headers:
