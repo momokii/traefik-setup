@@ -7,6 +7,7 @@ http:
       service: api@internal
       middlewares:
         - dashboard-auth
+        - security-headers@file
       tls:
         certResolver: letsencrypt
 
@@ -67,11 +68,6 @@ http:
         referrerPolicy: "same-origin"
         customResponseHeaders:
           server: ""
-
-    test-ipallowlist:
-      ipAllowList:
-        sourceRange:
-          - "YOUR_IP_ADDRESS"
 
     ## EXAMPLE — Sablier middleware (see examples/sablier-zero-scale/README.md)
     ## Uncomment the block below:
